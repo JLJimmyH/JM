@@ -57,6 +57,9 @@
 #include "erc_api.h"
 #include "mbuffer_common.h"
 #include "mbuffer_mvc.h"
+
+// Hook: 外部可設定的 callback，在 exit_picture 中 dec_picture 被移入 DPB 之前呼叫
+void (*jm_exit_picture_hook)(VideoParameters *p_Vid, StorablePicture *dec_pic) = NULL;
 #include "fast_memory.h"
 
 #include "mc_prediction.h"
@@ -1893,6 +1896,11 @@ void exit_picture(VideoParameters *p_Vid, StorablePicture **dec_picture)
   if (*dec_picture==NULL || (p_Vid->num_dec_mb != p_Vid->PicSizeInMbs && (p_Vid->yuv_format != YUV444 || !p_Vid->separate_colour_plane_flag)))
   {
     return;
+  }
+
+  // Hook: 在 dec_picture 移入 DPB 之前擷取 MB data
+  if (jm_exit_picture_hook) {
+    jm_exit_picture_hook(p_Vid, *dec_picture);
   }
 
 #if (DISABLE_ERC == 0)
