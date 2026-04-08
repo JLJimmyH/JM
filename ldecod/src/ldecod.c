@@ -28,7 +28,7 @@
  *     H.264/AVC reference decoder project main()
  *  \author
  *     Main contributors (see contributors.h for copyright, address and affiliation details)
- *     - Inge Lille-Lang�y       <inge.lille-langoy@telenor.com>
+ *     - Inge Lille-Lang�y       <inge.lille-langoy@telenor.com>
  *     - Rickard Sjoberg         <rickard.sjoberg@era.ericsson.se>
  *     - Stephan Wenger          <stewe@cs.tu-berlin.de>
  *     - Jani Lainema            <jani.lainema@nokia.com>
@@ -69,10 +69,16 @@
 #include "output.h"
 #include "h264decoder.h"
 #include "dec_statistics.h"
+#include <setjmp.h>
 
 #define LOGFILE     "log.dec"
 #define DATADECFILE "dataDec.txt"
 #define TRACEFILE   "trace_dec.txt"
+
+// setjmp/longjmp 防護：供外部 wrapper 攔截 error() → exit()
+jmp_buf jm_error_jmpbuf;
+volatile int jm_error_active = 0;
+char jm_error_msg[512] = {0};
 
 // Decoder definition. This should be the only global variable in the entire
 // software. Global variables should be avoided.
@@ -106,6 +112,13 @@ void error(char *text, int code)
 #if (MVC_EXTENSION_ENABLE)
     flush_dpb(p_Dec->p_Vid->p_Dpb_layer[1]);
 #endif
+  }
+
+  // longjmp 防護：如果外部設定了 jm_error_active，跳回而非 exit
+  if (jm_error_active) {
+    strncpy(jm_error_msg, text, sizeof(jm_error_msg) - 1);
+    jm_error_msg[sizeof(jm_error_msg) - 1] = '\0';
+    longjmp(jm_error_jmpbuf, code ? code : -1);
   }
 
   exit(code);
