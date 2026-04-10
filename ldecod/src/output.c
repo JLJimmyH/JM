@@ -516,9 +516,8 @@ static void write_out_picture(VideoParameters *p_Vid, StorablePicture *p, int p_
 
   //printf ("write frame size: %dx%d\n", p->size_x-crop_left-crop_right,p->size_y-crop_top-crop_bottom );
 
-  // We need to further cleanup this function
-  if (p_out == -1)
-    return;
+  // 即使 p_out==-1（不寫檔），仍需分配 pDecPic 並設 bValid
+  // 原始 JM 在此 return，導致 pDecPicList 不更新
 
 
 
@@ -660,8 +659,11 @@ static void write_out_picture(VideoParameters *p_Vid, StorablePicture *p, int p_
   }
 
   //free(buf);
- if(p_out >=0)
-   pDecPic->bValid = 0;
+ // 不清 bValid — 讓外部 caller 負責清除
+ // 原始 JM 由 decoder_test.c 的 WriteOneFrame 負責清
+ // 我們的 jm_wrapper.c 在 capture 後清除
+ // if(p_out >=0)
+ //   pDecPic->bValid = 0;
 
   //  fsync(p_out);
 }

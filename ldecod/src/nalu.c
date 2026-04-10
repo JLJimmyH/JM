@@ -83,12 +83,18 @@ int read_next_nalu(VideoParameters *p_Vid, NALU_t *nalu)
   ret = NALUtoRBSP(nalu);
 
   if (ret < 0)
-    error ("Invalid startcode emulation prevention found.", 602);
+  {
+    // Skip invalid NALU instead of fatal error — read next one
+    printf("Warning: Invalid startcode emulation prevention in NALU type %d, skipping.\n", nalu->nal_unit_type);
+    return read_next_nalu(p_Vid, nalu);
+  }
 
   // Got a NALU
   if (nalu->forbidden_bit)
   {
-    error ("Found NALU with forbidden_bit set, bit error?", 603);
+    // Skip NALU with forbidden_bit set — read next one
+    printf("Warning: NALU with forbidden_bit set (type %d), skipping.\n", nalu->nal_unit_type);
+    return read_next_nalu(p_Vid, nalu);
   }
 
   return nalu->len;
